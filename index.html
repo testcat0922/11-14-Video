@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>多影片自動輪播</title>
+  <title>自動偵測多影片輪播</title>
   <style>
     html, body {
       margin: 0;
@@ -23,25 +23,34 @@
   <video id="player" autoplay muted playsinline></video>
 
   <script>
-    // 你的影片清單（放在 GitHub Releases 也可以）
-    const videos = [
-      "https://github.com/testcat0922/11-14-Video/releases/latest/download/video1.mp4",
-      "https://github.com/testcat0922/11-14-Video/releases/latest/download/video2.mp4",
-      "https://github.com/testcat0922/11-14-Video/releases/latest/download/video3.mp4",
-    ];
+    // 設定影片總數與命名規則（可自由調整）
+    const totalVideos = 10; // 你有幾部就填幾部
+    const baseURL = "https://github.com/testcat0922/11-14-Video/releases/latest/download/";
+    const baseName = "video"; // 檔名前綴 (video1.mp4, video2.mp4...)
+    const extension = ".mp4";
+
+    // 自動產生影片清單
+    const videos = [];
+    for (let i = 1; i <= totalVideos; i++) {
+      videos.push(`${baseURL}${baseName}${i}${extension}`);
+    }
 
     const player = document.getElementById("player");
     let index = 0;
 
-    // 播第一部
-    player.src = videos[index];
-    player.play();
+    function playVideo(i) {
+      player.src = videos[i];
+      player.load();
+      player.play().catch(err => console.warn("autoplay blocked:", err));
+    }
 
-    // 當影片結束，自動換下一部
+    // 首部影片
+    playVideo(index);
+
+    // 結束自動下一部
     player.addEventListener("ended", () => {
-      index = (index + 1) % videos.length; // 循環播放全部影片
-      player.src = videos[index];
-      player.play();
+      index = (index + 1) % videos.length;
+      playVideo(index);
     });
   </script>
 </body>

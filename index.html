@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>多影片自動輪播</title>
+  <title>自動讀取影片清單輪播</title>
   <style>
     html, body {
       margin: 0;
@@ -23,28 +23,43 @@
   <video id="player" autoplay muted playsinline></video>
 
   <script>
-    // 🎬 手動列出你的影片名稱（在 Release 裡的檔案名）
-    const videos = [
-      "https://github.com/testcat0922/11-14-Video/releases/latest/download/10sec.Room.Traditional.Chinese.mp4",
-      "https://github.com/testcat0922/11-14-Video/releases/latest/download/AirMedia.Traditional.Chinese.mp4",
-      "https://github.com/testcat0922/11-14-Video/releases/latest/download/Sightline.Traditional.Chinese.mp4"
-    ];
+    const baseURL = "https://github.com/testcat0922/11-14-Video/releases/latest/download/";
 
-    const player = document.getElementById("player");
-    let index = 0;
-
-    function playVideo(i) {
-      player.src = videos[i];
-      player.load();
-      player.play().catch(err => console.warn("autoplay blocked:", err));
+    async function loadVideoList() {
+      try {
+        const res = await fetch("videos.txt");
+        if (!res.ok) throw new Error("無法讀取 videos.txt");
+        const names = (await res.text()).split("\n").map(x => x.trim()).filter(Boolean);
+        return names.map(name => baseURL + name);
+      } catch (err) {
+        console.error("讀取影片清單失敗：", err);
+        return [];
+      }
     }
 
-    playVideo(index);
+    (async () => {
+      const videos = await loadVideoList();
+      const player = document.getElementById("player");
 
-    player.addEventListener("ended", () => {
-      index = (index + 1) % videos.length;
+      if (videos.length === 0) {
+        document.body.innerHTML = "<h2 style='color:white;text-align:center;margin-top:40vh'>找不到影片清單</h2>";
+        return;
+      }
+
+      let index = 0;
+      function playVideo(i) {
+        player.src = videos[i];
+        player.load();
+        player.play().catch(err => console.warn("autoplay 被阻擋：", err));
+      }
+
       playVideo(index);
-    });
+
+      player.addEventListener("ended", () => {
+        index = (index + 1) % videos.length;
+        playVideo(index);
+      });
+    })();
   </script>
 </body>
 </html>

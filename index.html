@@ -4,18 +4,24 @@
   <meta charset="UTF-8">
   <title>投影播放</title>
   <style>
-    html,body{height:100%;margin:0;background:#000;overflow:hidden}
-    video, img{width:100vw;height:100vh;object-fit:cover;display:block}
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+    }
+    video {
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      display: block;
+      pointer-events: none; /* 禁止滑鼠互動，避免控制列顯示 */
+    }
   </style>
 </head>
 <body>
-  <!-- 影片（靜音自動播放、循環、行動裝置可自動播放） -->
   <video autoplay muted loop playsinline>
     <source src="https://github.com/testcat0922/11-14-Video/releases/latest/download/10sec.Room.Traditional.Chinese.mp4" type="video/mp4">
   </video>
-
-  <!-- 如果想放 GIF（或當作影片備援）：
-  <img src="https://github.com/testcat0922/11-14-Video/releases/latest/download/-Crestron-.-.1920x1080.gif" alt="">
-  -->
 </body>
 </html>

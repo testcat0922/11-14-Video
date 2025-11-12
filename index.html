@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>投影播放</title>
+  <title>多影片自動輪播</title>
   <style>
     html, body {
       margin: 0;
@@ -16,32 +16,32 @@
       object-fit: cover;
       display: block;
       pointer-events: none;
-      -webkit-appearance: none;
-    }
-    ::-webkit-media-controls,
-    ::-webkit-media-controls-enclosure,
-    ::-webkit-media-controls-overlay-play-button,
-    ::-webkit-media-controls-panel {
-      display: none !important;
-      visibility: hidden !important;
     }
   </style>
 </head>
 <body>
-  <video id="vid" autoplay muted loop playsinline>
-    <source src="https://github.com/testcat0922/11-14-Video/releases/latest/download/10sec.Room.Traditional.Chinese.mp4" type="video/mp4">
-  </video>
+  <video id="player" autoplay muted playsinline></video>
 
   <script>
-    // 等影片載入完畢再全螢幕
-    window.addEventListener("load", () => {
-      const vid = document.getElementById("vid");
-      const reqFull = () => {
-        if (vid.requestFullscreen) vid.requestFullscreen();
-        else if (vid.webkitRequestFullscreen) vid.webkitRequestFullscreen();
-        else if (vid.msRequestFullscreen) vid.msRequestFullscreen();
-      };
-      setTimeout(reqFull, 500); // 延遲半秒再進全螢幕，確保穩定
+    // 你的影片清單（放在 GitHub Releases 也可以）
+    const videos = [
+      "https://github.com/testcat0922/11-14-Video/releases/latest/download/video1.mp4",
+      "https://github.com/testcat0922/11-14-Video/releases/latest/download/video2.mp4",
+      "https://github.com/testcat0922/11-14-Video/releases/latest/download/video3.mp4",
+    ];
+
+    const player = document.getElementById("player");
+    let index = 0;
+
+    // 播第一部
+    player.src = videos[index];
+    player.play();
+
+    // 當影片結束，自動換下一部
+    player.addEventListener("ended", () => {
+      index = (index + 1) % videos.length; // 循環播放全部影片
+      player.src = videos[index];
+      player.play();
     });
   </script>
 </body>

@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>自動偵測多影片輪播</title>
+  <title>多影片自動輪播</title>
   <style>
     html, body {
       margin: 0;
@@ -23,17 +23,12 @@
   <video id="player" autoplay muted playsinline></video>
 
   <script>
-    // 設定影片總數與命名規則（可自由調整）
-    const totalVideos = 3; // 你有幾部就填幾部
-    const baseURL = "https://github.com/testcat0922/11-14-Video/releases/latest/download/";
-    const baseName = "Chinese"; // 檔名前綴 (video1.mp4, video2.mp4...)
-    const extension = ".mp4";
-
-    // 自動產生影片清單
-    const videos = [];
-    for (let i = 1; i <= totalVideos; i++) {
-      videos.push(`${baseURL}${baseName}${i}${extension}`);
-    }
+    // 🎬 手動列出你的影片名稱（在 Release 裡的檔案名）
+    const videos = [
+      "https://github.com/testcat0922/11-14-Video/releases/latest/download/10sec.Room.Traditional.Chinese.mp4",
+      "https://github.com/testcat0922/11-14-Video/releases/latest/download/AirMedia.Traditional.Chinese.mp4",
+      "https://github.com/testcat0922/11-14-Video/releases/latest/download/Sightline.Traditional.Chinese.mp4"
+    ];
 
     const player = document.getElementById("player");
     let index = 0;
@@ -44,10 +39,8 @@
       player.play().catch(err => console.warn("autoplay blocked:", err));
     }
 
-    // 首部影片
     playVideo(index);
 
-    // 結束自動下一部
     player.addEventListener("ended", () => {
       index = (index + 1) % videos.length;
       playVideo(index);

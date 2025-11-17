@@ -2,20 +2,19 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>自動讀取影片與GIF清單輪播</title>
+  <title>影片＋GIF 輪播（支援 TXT 秒數）</title>
   <style>
     html, body {
       margin: 0;
       height: 100%;
-      background: #000;
       overflow: hidden;
+      background: black;
     }
     video, img {
+      position: absolute;
       width: 100vw;
       height: 100vh;
       object-fit: cover;
-      display: block;
-      position: absolute;
       top: 0;
       left: 0;
     }
@@ -23,59 +22,79 @@
   </style>
 </head>
 <body>
+
   <video id="player" autoplay muted playsinline></video>
-  <img id="gifPlayer"/>
+  <img  id="gifPlayer" />
 
   <script>
     const baseURL = "https://github.com/testcat0922/11-14-Video/releases/latest/download/";
 
-    async function loadMediaList() {
-      const res = await fetch("videos.txt");
-      if (!res.ok) throw new Error("無法讀 videos.txt");
-      return (await res.text())
-        .split("\n")
-        .map(x => x.trim())
-        .filter(Boolean)
-        .map(name => baseURL + name);
+    // 讀取 txt → 解析：檔名 | 秒數
+    async function loadList() {
+      const res = await fetch('videos.txt');
+      const lines = (await res.text()).split('\n').map(x => x.trim()).filter(Boolean);
+
+      return lines.map(line => {
+        const [name, time] = line.split('|');
+        return {
+          url: baseURL + name.trim(),
+          duration: time ? parseInt(time.trim()) : null
+        };
+      });
     }
 
     (async () => {
-      const list = await loadMediaList();
-      const video = document.getElementById("player");
-      const gif = document.getElementById("gifPlayer");
+      const list = await loadList();
+
+      const video = document.getElementById('player');
+      const gif   = document.getElementById('gifPlayer');
+
       let index = 0;
+      let gifTimer = null;
 
-      function playMedia(i) {
-        const url = list[i];
-        const isGIF = url.toLowerCase().endsWith(".gif");
+      function playItem(i) {
+        const item = list[i];
+        const isGif = item.url.toLowerCase().endsWith('.gif');
 
-        if (isGIF) {
-          video.style.display = "none";
-          gif.style.display = "block";
+        // 清除舊的 GIF 計時器
+        if (gifTimer) clearTimeout(gifTimer);
 
-          // ⭐ 重要：加亂數強制重新載入 GIF
-          gif.src = url + "?v=" + Date.now();
+        if (isGif) {
+          // 顯示 GIF
+          video.style.display = 'none';
+          gif.style.display   = 'block';
 
-          setTimeout(nextMedia, 10000); // GIF 播 10 秒
+          // 每次加時間戳避免 Cache
+          gif.src = item.url + "?v=" + Date.now();
+
+          // 如果 GIF 沒設定時間 → 預設 10 秒
+          const ms = item.duration ?? 10000;
+
+          gifTimer = setTimeout(next, ms);
+
         } else {
-          gif.style.display = "none";
-          video.style.display = "block";
+          // 播 MP4
+          gif.style.display   = 'none';
+          video.style.display = 'block';
 
-          video.src = url + "?v=" + Date.now(); // video 也加強制 reload
+          video.src = item.url + "?v=" + Date.now();
           video.load();
-          video.play().catch(e => console.warn("autoplay blocked:", e));
+          video.play().catch(e => console.warn("Autoplay blocked:", e));
         }
       }
 
-      function nextMedia() {
+      function next() {
         index = (index + 1) % list.length;
-        playMedia(index);
+        playItem(index);
       }
 
-      video.addEventListener("ended", nextMedia);
+      // MP4 播完自動換下一個
+      video.addEventListener("ended", next);
 
-      playMedia(index);
+      // 開始播放
+      playItem(index);
     })();
   </script>
+
 </body>
 </html>

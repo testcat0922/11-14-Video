@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>自動讀取影片清單輪播</title>
+  <title>自動讀取影片與GIF清單輪播</title>
   <style>
     html, body {
       margin: 0;
@@ -10,55 +10,67 @@
       background: #000;
       overflow: hidden;
     }
-    video {
+    video, img {
       width: 100vw;
       height: 100vh;
       object-fit: cover;
       display: block;
-      pointer-events: none;
+    }
+    #player, #gifPlayer {
+      position: absolute;
+      top: 0; left: 0;
     }
   </style>
 </head>
 <body>
   <video id="player" autoplay muted playsinline></video>
+  <img id="gifPlayer" style="display:none" />
 
   <script>
     const baseURL = "https://github.com/testcat0922/11-14-Video/releases/latest/download/";
 
-    async function loadVideoList() {
-      try {
-        const res = await fetch("videos.txt");
-        if (!res.ok) throw new Error("無法讀取 videos.txt");
-        const names = (await res.text()).split("\n").map(x => x.trim()).filter(Boolean);
-        return names.map(name => baseURL + name);
-      } catch (err) {
-        console.error("讀取影片清單失敗：", err);
-        return [];
-      }
+    async function loadMediaList() {
+      const res = await fetch("videos.txt");
+      if (!res.ok) throw new Error("無法讀取 videos.txt");
+      const names = (await res.text()).split("\n").map(x => x.trim()).filter(Boolean);
+      return names.map(name => baseURL + name);
     }
 
     (async () => {
-      const videos = await loadVideoList();
-      const player = document.getElementById("player");
-
-      if (videos.length === 0) {
-        document.body.innerHTML = "<h2 style='color:white;text-align:center;margin-top:40vh'>找不到影片清單</h2>";
-        return;
-      }
-
+      const mediaList = await loadMediaList();
+      const video = document.getElementById("player");
+      const gif = document.getElementById("gifPlayer");
       let index = 0;
-      function playVideo(i) {
-        player.src = videos[i];
-        player.load();
-        player.play().catch(err => console.warn("autoplay 被阻擋：", err));
+
+      function playMedia(i) {
+        const url = mediaList[i];
+        const isGIF = url.toLowerCase().endsWith(".gif");
+
+        if (isGIF) {
+          // 播 GIF
+          video.style.display = "none";
+          gif.style.display = "block";
+          gif.src = url;
+
+          // 設定顯示 10 秒後換下一個（GIF 沒有結束事件）
+          setTimeout(() => nextMedia(), 10000);
+        } else {
+          // 播 MP4
+          gif.style.display = "none";
+          video.style.display = "block";
+          video.src = url;
+          video.load();
+          video.play().catch(err => console.warn("autoplay 被阻擋：", err));
+        }
       }
 
-      playVideo(index);
+      function nextMedia() {
+        index = (index + 1) % mediaList.length;
+        playMedia(index);
+      }
 
-      player.addEventListener("ended", () => {
-        index = (index + 1) % videos.length;
-        playVideo(index);
-      });
+      video.addEventListener("ended", nextMedia);
+      playMedia(index);
     })();
   </script>
 </body>

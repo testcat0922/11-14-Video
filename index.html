@@ -21,6 +21,10 @@
       top: 0; left: 0;
     }
   </style>
+
+  <!-- GIF 解析器：gifuct-js -->
+  <script src="https://cdn.jsdelivr.net/npm/gifuct-js@2.0.0/dist/gifuct.min.js"></script>
+
 </head>
 <body>
   <video id="player" autoplay muted playsinline></video>
@@ -36,26 +40,42 @@
       return names.map(name => baseURL + name);
     }
 
+    // 解析 GIF 時長
+    async function getGifDuration(url) {
+      const res = await fetch(url);
+      const buf = await res.arrayBuffer();
+      const gif = gifuct.parseGIF(buf);
+      const frames = gifuct.decompressFrames(gif, true);
+
+      let total = 0;
+      frames.forEach(f => {
+        if (f.delay) total += f.delay * 10; // GIF delay 單位為 1/100 秒 → *10 = 毫秒
+      });
+
+      return total; // 回傳毫秒
+    }
+
     (async () => {
-      const mediaList = await loadMediaList();
+      const list = await loadMediaList();
       const video = document.getElementById("player");
       const gif = document.getElementById("gifPlayer");
+
       let index = 0;
 
-      function playMedia(i) {
-        const url = mediaList[i];
+      async function playMedia(i) {
+        const url = list[i];
         const isGIF = url.toLowerCase().endsWith(".gif");
 
         if (isGIF) {
-          // 播 GIF
           video.style.display = "none";
           gif.style.display = "block";
           gif.src = url;
 
-          // 設定顯示 10 秒後換下一個（GIF 沒有結束事件）
-          setTimeout(() => nextMedia(), 10000);
+          let duration = await getGifDuration(url);
+          console.log("GIF 播放時間:", duration, "ms");
+
+          setTimeout(nextMedia, duration);
         } else {
-          // 播 MP4
           gif.style.display = "none";
           video.style.display = "block";
           video.src = url;
@@ -65,11 +85,12 @@
       }
 
       function nextMedia() {
-        index = (index + 1) % mediaList.length;
+        index = (index + 1) % list.length;
         playMedia(index);
       }
 
       video.addEventListener("ended", nextMedia);
+
       playMedia(index);
     })();
   </script>

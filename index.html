@@ -15,61 +15,65 @@
       height: 100vh;
       object-fit: cover;
       display: block;
-    }
-    #player, #gifPlayer {
       position: absolute;
-      top: 0; left: 0;
+      top: 0;
+      left: 0;
     }
+    #gifPlayer { display: none; }
   </style>
 </head>
 <body>
   <video id="player" autoplay muted playsinline></video>
-  <img id="gifPlayer" style="display:none" />
+  <img id="gifPlayer"/>
 
   <script>
     const baseURL = "https://github.com/testcat0922/11-14-Video/releases/latest/download/";
 
     async function loadMediaList() {
       const res = await fetch("videos.txt");
-      if (!res.ok) throw new Error("無法讀取 videos.txt");
-      const names = (await res.text()).split("\n").map(x => x.trim()).filter(Boolean);
-      return names.map(name => baseURL + name);
+      if (!res.ok) throw new Error("無法讀 videos.txt");
+      return (await res.text())
+        .split("\n")
+        .map(x => x.trim())
+        .filter(Boolean)
+        .map(name => baseURL + name);
     }
 
     (async () => {
-      const mediaList = await loadMediaList();
+      const list = await loadMediaList();
       const video = document.getElementById("player");
       const gif = document.getElementById("gifPlayer");
       let index = 0;
 
       function playMedia(i) {
-        const url = mediaList[i];
+        const url = list[i];
         const isGIF = url.toLowerCase().endsWith(".gif");
 
         if (isGIF) {
-          // 播 GIF
           video.style.display = "none";
           gif.style.display = "block";
-          gif.src = url;
 
-          // 設定顯示 10 秒後換下一個（GIF 沒有結束事件）
-          setTimeout(() => nextMedia(), 10000);
+          // ⭐ 重要：加亂數強制重新載入 GIF
+          gif.src = url + "?v=" + Date.now();
+
+          setTimeout(nextMedia, 10000); // GIF 播 10 秒
         } else {
-          // 播 MP4
           gif.style.display = "none";
           video.style.display = "block";
-          video.src = url;
+
+          video.src = url + "?v=" + Date.now(); // video 也加強制 reload
           video.load();
-          video.play().catch(err => console.warn("autoplay 被阻擋：", err));
+          video.play().catch(e => console.warn("autoplay blocked:", e));
         }
       }
 
       function nextMedia() {
-        index = (index + 1) % mediaList.length;
+        index = (index + 1) % list.length;
         playMedia(index);
       }
 
       video.addEventListener("ended", nextMedia);
+
       playMedia(index);
     })();
   </script>

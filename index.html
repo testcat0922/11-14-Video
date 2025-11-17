@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>自動讀取影片與GIF清單輪播</title>
+  <title>自動讀取影片與GIF清單輪播（GIF完整播放版）</title>
   <style>
     html, body {
       margin: 0;
@@ -15,51 +15,32 @@
       height: 100vh;
       object-fit: cover;
       display: block;
-    }
-    #player, #gifPlayer {
       position: absolute;
       top: 0; left: 0;
     }
+    #gifPlayer {
+      display: none;
+    }
   </style>
-
-  <!-- GIF 解析器：gifuct-js -->
-  <script src="https://cdn.jsdelivr.net/npm/gifuct-js@2.0.0/dist/gifuct.min.js"></script>
-
 </head>
 <body>
   <video id="player" autoplay muted playsinline></video>
-  <img id="gifPlayer" style="display:none" />
+  <img id="gifPlayer">
 
   <script>
     const baseURL = "https://github.com/testcat0922/11-14-Video/releases/latest/download/";
 
+    // 讀取 videos.txt
     async function loadMediaList() {
       const res = await fetch("videos.txt");
-      if (!res.ok) throw new Error("無法讀取 videos.txt");
       const names = (await res.text()).split("\n").map(x => x.trim()).filter(Boolean);
       return names.map(name => baseURL + name);
-    }
-
-    // 解析 GIF 時長
-    async function getGifDuration(url) {
-      const res = await fetch(url);
-      const buf = await res.arrayBuffer();
-      const gif = gifuct.parseGIF(buf);
-      const frames = gifuct.decompressFrames(gif, true);
-
-      let total = 0;
-      frames.forEach(f => {
-        if (f.delay) total += f.delay * 10; // GIF delay 單位為 1/100 秒 → *10 = 毫秒
-      });
-
-      return total; // 回傳毫秒
     }
 
     (async () => {
       const list = await loadMediaList();
       const video = document.getElementById("player");
       const gif = document.getElementById("gifPlayer");
-
       let index = 0;
 
       async function playMedia(i) {
@@ -67,17 +48,51 @@
         const isGIF = url.toLowerCase().endsWith(".gif");
 
         if (isGIF) {
+          // 隱藏 video，顯示 GIF
           video.style.display = "none";
           gif.style.display = "block";
-          gif.src = url;
 
-          let duration = await getGifDuration(url);
-          console.log("GIF 播放時間:", duration, "ms");
+          // 每次都重新載入 GIF 來達到「從頭播放」
+          gif.src = url + "?t=" + Date.now(); 
 
-          setTimeout(nextMedia, duration);
+          // 方法：用 setTimeout + 輕微延遲偵測來等 GIF 跑完
+          // GIF 完成播放的判斷方式：偵測最後一禎停止不變
+          let lastFrameData = "";
+          let stableCount = 0;
+
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+
+          function checkFrame() {
+            canvas.width = gif.width;
+            canvas.height = gif.height;
+
+            ctx.drawImage(gif, 0, 0);
+            const data = canvas.toDataURL();
+
+            if (data === lastFrameData) {
+              stableCount++;
+            } else {
+              stableCount = 0;
+            }
+
+            lastFrameData = data;
+
+            // 「10 次以上完全不變」代表 GIF 播完
+            if (stableCount >= 10) {
+              nextMedia();
+            } else {
+              requestAnimationFrame(checkFrame);
+            }
+          }
+
+          requestAnimationFrame(checkFrame);
+
         } else {
+          // MP4 播放
           gif.style.display = "none";
           video.style.display = "block";
+
           video.src = url;
           video.load();
           video.play().catch(err => console.warn("autoplay 被阻擋：", err));
@@ -90,7 +105,6 @@
       }
 
       video.addEventListener("ended", nextMedia);
-
       playMedia(index);
     })();
   </script>

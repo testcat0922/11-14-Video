@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>影片＋GIF 輪播（支援 GIF 時長設定）</title>
+  <title>自動讀取影片與GIF清單輪播</title>
   <style>
     html, body {
       margin: 0;
@@ -15,66 +15,61 @@
       height: 100vh;
       object-fit: cover;
       display: block;
+    }
+    #player, #gifPlayer {
       position: absolute;
       top: 0; left: 0;
     }
-    #gifPlayer { display: none; }
   </style>
 </head>
 <body>
   <video id="player" autoplay muted playsinline></video>
-  <img id="gifPlayer">
+  <img id="gifPlayer" style="display:none" />
 
   <script>
     const baseURL = "https://github.com/testcat0922/11-14-Video/releases/latest/download/";
 
-    // 讀取 videos.txt
     async function loadMediaList() {
       const res = await fetch("videos.txt");
-      const lines = (await res.text()).split("\n").map(x => x.trim()).filter(Boolean);
-
-      return lines.map(line => {
-        const [name, time] = line.split("|");
-        return {
-          url: baseURL + name,
-          duration: time ? parseInt(time) : null  // mp4 不需要 duration
-        };
-      });
+      if (!res.ok) throw new Error("無法讀取 videos.txt");
+      const names = (await res.text()).split("\n").map(x => x.trim()).filter(Boolean);
+      return names.map(name => baseURL + name);
     }
 
     (async () => {
-      const list = await loadMediaList();
+      const mediaList = await loadMediaList();
       const video = document.getElementById("player");
       const gif = document.getElementById("gifPlayer");
       let index = 0;
 
       function playMedia(i) {
-        const item = list[i];
-        const isGIF = item.url.toLowerCase().endsWith(".gif");
+        const url = mediaList[i];
+        const isGIF = url.toLowerCase().endsWith(".gif");
 
         if (isGIF) {
+          // 播 GIF
           video.style.display = "none";
           gif.style.display = "block";
-          gif.src = item.url + "?t=" + Date.now();
+          gif.src = url;
 
-          setTimeout(nextMedia, item.duration || 5000); // 預設五秒
+          // 設定顯示 10 秒後換下一個（GIF 沒有結束事件）
+          setTimeout(() => nextMedia(), 15000);
         } else {
+          // 播 MP4
           gif.style.display = "none";
           video.style.display = "block";
-
-          video.src = item.url;
+          video.src = url;
           video.load();
-          video.play().catch(e => console.log(e));
+          video.play().catch(err => console.warn("autoplay 被阻擋：", err));
         }
       }
 
       function nextMedia() {
-        index = (index + 1) % list.length;
+        index = (index + 1) % mediaList.length;
         playMedia(index);
       }
 
       video.addEventListener("ended", nextMedia);
-
       playMedia(index);
     })();
   </script>
